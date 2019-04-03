@@ -1,0 +1,146 @@
+const int row[8] = {11,2,3,14,5,13,9,8};
+const int col[8] = {4,1,6,0,12,7,10,15};
+
+int key[4];
+int pixel[8][8];
+int directions[4][2]={{-1,0},{0,-1},{1,0},{0,1}};
+
+int snake[65][3];
+int snake_length;
+int snake_new;
+int snake_re_game;
+int food[2];
+
+
+void setup()
+{
+  for (int thisPin = 0; thisPin < 8; thisPin++) 
+  {
+    pinMode(col[thisPin], OUTPUT);
+    pinMode(row[thisPin], OUTPUT);
+    digitalWrite(col[thisPin], HIGH);
+  }
+  pinMode(16, INPUT);
+  pinMode(17, INPUT);
+  pinMode(18, INPUT);
+  pinMode(19, INPUT);
+  snake_re_game=1;
+}
+
+void input()
+{
+  if(key[0]==0)key[0]=digitalRead(16);
+  if(key[1]==0)key[1]=digitalRead(17);
+  if(key[2]==0)key[2]=digitalRead(18);
+  if(key[3]==0)key[3]=digitalRead(19);
+}
+
+void game()
+{
+  if(snake_re_game)
+  {
+    snake_length=1;
+    snake[0][0]=random(8);
+    snake[0][1]=random(8);
+    snake[0][2]=0;
+
+    food[0]=random(8);
+    food[1]=random(8);
+
+    for(int x=0;x<8;x++)
+      for(int y=0;y<8;y++)
+        pixel[x][y]=0;
+    for(int i=0;i<snake_length;i++)
+      pixel[snake[i][0]][snake[i][1]]=1;
+    pixel[food[0]][food[1]]=1;
+
+    snake_re_game=0;
+  }
+  else
+  {
+    for(int x=0;x<8;x++)
+      for(int y=0;y<8;y++)
+        pixel[x][y]=0;
+
+    snake_new=snake[0][2];
+    for(int i=0;i<4;i++)
+      if(key[i]==1&&i!=(snake_new+2)%4)
+        snake_new=i;
+
+    if((snake[0][0]+directions[snake_new][0]+8)%8==food[0]&&(snake[0][1]+directions[snake_new][1]+8)%8==food[1])
+    {
+      snake_length++;
+      for(int i=snake_length;i>0;i--)
+        for(int j=0;j<3;j++)
+        snake[i][j]=snake[i-1][j];
+
+      snake[0][0]=food[0];
+      snake[0][1]=food[1];
+      snake[0][2]=snake_new;
+
+      int not_find=1;
+      while(not_find)
+      {
+        food[0]=random(8);
+        food[1]=random(8);
+        not_find=0;
+        for(int i=0;i<snake_length;i++)
+          if(snake[i][0]==food[0]&&snake[i][1]==food[1])
+            {
+              food[0]=random(8);
+              food[1]=random(8);
+              not_find=1;
+            }
+      }
+    }
+    else
+    {
+      for(int i=snake_length;i>0;i--)
+        for(int j=0;j<3;j++)
+        snake[i][j]=snake[i-1][j];
+
+      snake[0][0]=(snake[1][0]+directions[snake_new][0]+8)%8;
+      snake[0][1]=(snake[1][1]+directions[snake_new][1]+8)%8;
+      snake[0][2]=snake_new;
+    }
+    
+    for(int i=1;i<snake_length;i++)
+      if(snake[i][0]==snake[0][0]&&snake[i][1]==snake[0][1])
+        snake_re_game=1;
+
+
+    for(int x=0;x<8;x++)
+      for(int y=0;y<8;y++)
+        pixel[x][y]=0;
+    for(int i=0;i<snake_length;i++)
+      pixel[snake[i][0]][snake[i][1]]=1;
+    pixel[food[0]][food[1]]=1;
+  }
+  for(int i=0;i<4;i++)
+    key[i]=0;
+}
+
+void loop()
+{
+    game();
+    for(int i=0;i<30;i++)
+    {
+      for(int j=0;j<10;j++)
+        prints();
+      input();
+    }
+}
+
+void prints()
+{
+    for (int thisCol = 0; thisCol < 8; thisCol++) 
+    {
+      for (int thisRow = 0; thisRow < 8; thisRow++) 
+      {
+        digitalWrite(row[thisRow], pixel[thisRow][thisCol]);
+        digitalWrite(col[thisCol], 1-pixel[thisRow][thisCol]);
+        digitalWrite(col[thisCol], HIGH);
+        digitalWrite(row[thisRow], LOW);
+      }
+    }
+}

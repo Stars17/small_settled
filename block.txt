@@ -1,0 +1,222 @@
+const int row[8] = {11,2,3,14,5,13,9,8};
+const int col[8] = {4,1,6,0,12,7,10,15};
+
+int key[4];
+int pixel[8][8];
+int directions[4][2] = { {0,0},{0,-1},{0,1},{1,0} };
+
+int block_all[6][3][3]={
+  {
+    {0,0,0},
+    {1,1,1},
+    {0,0,0}
+  },{
+    {0,1,0},
+    {0,1,0},
+    {0,1,0}
+  },{
+    {0,1,0},
+    {1,1,0},
+    {0,0,0}
+  },{
+    {0,1,0},
+    {0,1,1},
+    {0,0,0}
+  },{
+    {0,0,0},
+    {0,1,1},
+    {0,1,0}
+  },{
+    {0,0,0},
+    {1,1,0},
+    {0,1,0}
+  }
+};
+int positions[2];
+int toward[2];
+int shape;
+int block_re_game;
+
+
+void setup()
+{
+  for (int thisPin = 0; thisPin < 8; thisPin++) 
+  {
+    pinMode(col[thisPin], OUTPUT);
+    pinMode(row[thisPin], OUTPUT);
+    digitalWrite(col[thisPin], HIGH);
+  }
+  pinMode(16, INPUT);
+  pinMode(17, INPUT);
+  pinMode(18, INPUT);
+  pinMode(19, INPUT);
+  block_re_game=1;
+}
+
+void input()
+{
+  if(key[0]==0)key[0]=digitalRead(17);
+  if(key[1]==0)key[1]=digitalRead(16);
+  if(key[2]==0)key[2]=digitalRead(18);
+  if(key[3]==0)key[3]=digitalRead(19);
+}
+
+void game()
+{
+  if(block_re_game)
+  {
+  shape=random(6);
+  positions[0]=-2;
+  positions[1]=3;
+
+  for(int x=0;x<8;x++)
+    for(int y=0;y<8;y++)
+      pixel[x][y]=0;
+
+  block_re_game=0;
+  }
+  else
+  {
+    int key_now=-1;
+    for(int i=0;i<4;i++)
+      if(key[i]==1)
+        key_now=i;
+
+    for(int x=0;x<3;x++)
+      for(int y=0;y<3;y++)
+        if(block_all[shape][x][y])
+          if(x+positions[0]>=0&&y+positions[1]>=0&&x+positions[0]<8&&y+positions[1]<8)
+            pixel[x+positions[0]][y+positions[1]]=0;
+
+
+    for(int x=7;x>=0;x--)
+    {
+      int can_clear=1;
+      for(int y=0;y<8;y++)
+        if(pixel[x][y]==0)
+          can_clear=0;
+      if(can_clear)
+      {
+        for(int i=x;i>0;i--)
+          for(int j=0;j<8;j++)
+            pixel[i][j]=pixel[i-1][j];
+      }
+    }
+
+    if (key_now >= 0 && key_now < 3)
+    {
+      int shape_temp = shape;
+      if (key_now == 0)
+        if (shape < 2)
+          shape_temp = 1 - shape;
+        else
+          shape_temp = (shape - 1) % 4 + 2;
+
+      int can_move = 1;
+      for (int x = 0; x < 3; x++)
+        for (int y = 0; y < 3; y++)
+          if (block_all[shape_temp][x][y])
+          {
+            int x_temp = x + positions[0] + directions[key_now][0];
+            int y_temp = y + positions[1] + directions[key_now][1];
+
+            if (x_temp < 8 && y_temp >= 0 && y_temp < 8)
+            {
+              if(x_temp > 0)
+                if (pixel[x_temp][y_temp] == 1)
+                  can_move = 0;
+            }
+            else
+              can_move = 0;
+          }
+
+      if (can_move)
+      {
+        positions[0] += directions[key_now][0];
+        positions[1] += directions[key_now][1];
+        shape = shape_temp;
+      }
+
+      for (int x = 0; x < 3; x++)
+        for (int y = 0; y < 3; y++)
+          if (block_all[shape][x][y])
+            if(x+positions[0]>=0&&y+positions[1]>=0&&x+positions[0]<8&&y+positions[1]<8)
+              pixel[x + positions[0]][y + positions[1]] = 1;
+    }
+    else
+    {
+      int can_down = 0;
+      key[3]+=2;
+      while (--key[3])
+      {
+        int can_down_temp = 1;
+        for (int x = 0; x < 3; x++)
+          for (int y = 0; y < 3; y++)
+            if (block_all[shape][x][y])
+              if (x + positions[0] + can_down_temp + can_down < 8)
+              {
+                if (x + positions[0] + can_down_temp + can_down > 0)
+                  if (pixel[x + positions[0] + can_down_temp+ can_down][y + positions[1]] == 1)
+                    can_down_temp = 0;
+              }
+              else
+                can_down_temp = 0;
+          can_down += can_down_temp;
+      }
+
+      if (can_down)
+      {
+        positions[0] += can_down;
+        for (int x = 0; x < 3; x++)
+          for (int y = 0; y < 3; y++)
+            if (block_all[shape][x][y])
+              if(x+positions[0]>=0&&y+positions[1]>=0&&x+positions[0]<8&&y+positions[1]<8)
+                pixel[x + positions[0]][y + positions[1]] = 1;
+      }
+      else
+      {
+        for (int x = 0; x < 3; x++)
+          for (int y = 0; y < 3; y++)
+            if (block_all[shape][x][y])
+              if(x+positions[0]>=0&&y+positions[1]>=0&&x+positions[0]<8&&y+positions[1]<8)
+                pixel[x + positions[0]][y + positions[1]] = 1;
+
+        for (int i = 0; i < 8; i++)
+          if (pixel[0][i] == 1)
+            block_re_game = 1;
+
+        shape=random(6);
+        positions[0]=-3;
+        positions[1]=3;
+      }
+    }
+  }
+
+  for(int i=0;i<4;i++)
+    key[i]=0;
+}
+
+void loop()
+{
+    game();
+    for(int i=0;i<20;i++)
+    {
+      for(int j=0;j<20;j++)
+        prints();
+      input();
+    }
+}
+
+void prints()
+{
+    for (int thisCol = 0; thisCol < 8; thisCol++) 
+    {
+      for (int thisRow = 0; thisRow < 8; thisRow++) 
+      {
+        digitalWrite(row[thisRow], pixel[thisCol][thisRow]);
+        digitalWrite(col[thisCol], 1-pixel[thisCol][thisRow]);
+        digitalWrite(col[thisCol], HIGH);
+        digitalWrite(row[thisRow], LOW);
+      }
+    }
+}
